@@ -62,7 +62,7 @@ Erizo.Room = function (spec) {
         try {
             that.socket.disconnect();
         } catch (error) {
-            L.Logger.debug("Socket already disconnected");
+            // Pass silently
         }
         that.socket = undefined;
     });
@@ -87,8 +87,6 @@ Erizo.Room = function (spec) {
     sendDataSocket = function (stream, msg) {
         if (stream.local) {
             sendMessageSocket("sendDataStream", {id: stream.getID(), msg: msg});
-        } else {
-            L.Logger.error("You can not send data through a remote stream");
         }
     };
 
@@ -96,15 +94,12 @@ Erizo.Room = function (spec) {
         if (stream.local) {
             stream.updateLocalAttributes(attrs);
             sendMessageSocket("updateStreamAttributes", {id: stream.getID(), attrs: attrs});
-        } else {
-            L.Logger.error("You can not update attributes in a remote stream");
-        }  
+        }
     };
 
     // It connects to the server through socket.io
     connectSocket = function (token, callback, error) {
         // Once we have connected
-        console.log(token);
         that.socket = io.connect(token.host, {reconnect: false, secure: token.secure, 'force new connection': true});
 
         // We receive an event with a new stream in the room.
@@ -124,7 +119,7 @@ Erizo.Room = function (spec) {
             } else {
                 stream = that.localStreams[arg.streamId];
             }
-             
+
             if (stream) {
                 stream.pc.processSignalingMessage(arg.mess);
             }
@@ -141,7 +136,7 @@ Erizo.Room = function (spec) {
 
                 if (!stream.pc) {
                     create_remote_pc(stream, arg.peerSocket);
-                }   
+                }
                 stream.pc.processSignalingMessage(arg.msg);
             }
         });
@@ -177,7 +172,6 @@ Erizo.Room = function (spec) {
 
             stream.pc.onaddstream = function (evt) {
                 // Draw on html
-                L.Logger.info('Stream subscribed');
                 stream.stream = evt.stream;
                 var evt2 = Erizo.StreamEvent({type: 'stream-subscribed', stream: stream});
                 that.dispatchEvent(evt2);
@@ -212,7 +206,6 @@ Erizo.Room = function (spec) {
 
         // The socket has disconnected
         that.socket.on('disconnect', function (argument) {
-            L.Logger.info("Socket disconnected");
             if (that.state !== DISCONNECTED) {
                 var disconnectEvt = Erizo.RoomEvent({type: "room-disconnected"});
                 that.dispatchEvent(disconnectEvt);
@@ -220,7 +213,6 @@ Erizo.Room = function (spec) {
         });
 
         that.socket.on('connection_failed', function(arg){
-            L.Logger.info("ICE Connection Failed");
             if (that.state !== DISCONNECTED) {
                   var disconnectEvt = Erizo.RoomEvent({type: "stream-failed"});
                   that.dispatchEvent(disconnectEvt);
@@ -267,10 +259,6 @@ Erizo.Room = function (spec) {
         var streamList = [],
             token = L.Base64.decodeBase64(spec.token);
 
-        if (that.state !== DISCONNECTED) {
-            L.Logger.error("Room already connected");
-        }
-
         // 1- Connect to Erizo-Controller
         that.state = CONNECTING;
         connectSocket(JSON.parse(token), function (response) {
@@ -297,12 +285,10 @@ Erizo.Room = function (spec) {
             // 3 - Update RoomID
             that.roomID = roomId;
 
-            L.Logger.info("Connected to room " + that.roomID);
-
             connectEvt = Erizo.RoomEvent({type: "room-connected", streams: streamList});
             that.dispatchEvent(connectEvt);
         }, function (error) {
-            L.Logger.error("Not Connected! Error: " + error);
+            // Pass silently
         });
     };
 
@@ -342,7 +328,6 @@ Erizo.Room = function (spec) {
                     sendSDPSocket('publish', {state: type, data: stream.hasData(), audio: stream.hasAudio(), video: stream.hasVideo(), attributes: stream.getAttributes()}, arg, function (id, error) {
 
                         if (id !== null) {
-                            L.Logger.info('Stream published');
                             stream.getID = function () {
                                 return id;
                             };
@@ -357,7 +342,6 @@ Erizo.Room = function (spec) {
                             if (callback)
                                 callback(id);
                         } else {
-                            L.Logger.error('Error when publishing the stream', error);
                             // Unauth -1052488119
                             // Network -5
                             if (callback)
@@ -371,11 +355,9 @@ Erizo.Room = function (spec) {
                     spec.maxVideoBW = options.maxVideoBW;
                     sendSDPSocket('publish', {state: 'p2p', data: stream.hasData(), audio: stream.hasAudio(), video: stream.hasVideo(), screen: stream.hasScreen(), attributes: stream.getAttributes()}, undefined, function (id, error) {
                         if (id === null) {
-                            L.Logger.error('Error when publishing the stream', error);
                             if (callback)
                                 callback(undefined, error);
                         }
-                        L.Logger.info('Stream published');
                         stream.getID = function () {
                             return id;
                         };
@@ -397,13 +379,11 @@ Erizo.Room = function (spec) {
                     sendSDPSocket('publish', {state: 'erizo', data: stream.hasData(), audio: stream.hasAudio(), video: stream.hasVideo(), screen: stream.hasScreen(), attributes: stream.getAttributes()}, undefined, function (id, error) {
 
                         if (id === null) {
-                            L.Logger.error('Error when publishing the stream: ', error);
                             if (callback)
                                 callback(undefined, error);
                             return;
                         }
 
-                        L.Logger.info('Stream published');
                         stream.getID = function () {
                             return id;
                         };
@@ -419,26 +399,23 @@ Erizo.Room = function (spec) {
                         stream.room = that;
 
                         stream.pc = Erizo.Connection({callback: function (message) {
-                            console.log("Sending message", message);
                             sendSDPSocket('signaling_message', {streamId: stream.getID(), msg: message}, undefined, function () {});
                         }, stunServerUrl: that.stunServerUrl, turnServer: that.turnServer, maxAudioBW: options.maxAudioBW, maxVideoBW: options.maxVideoBW, audio:stream.hasAudio(), video: stream.hasVideo()});
-                        
+
                         stream.pc.addStream(stream.stream);
                         stream.pc.createOffer();
                         if(callback) callback(id);
-                        
+
                     });
                 }
             } else if (stream.hasData()) {
                 // 3- Publish Data Stream
                 sendSDPSocket('publish', {state: 'data', data: stream.hasData(), audio: false, video: false, screen: false, attributes: stream.getAttributes()}, undefined, function (id, error) {
                     if (id === null) {
-                        L.Logger.error('Error publishing stream ', error);
                         if (callback)
                             callback(undefined, error);
                         return;
                     }
-                    L.Logger.info('Stream published');
                     stream.getID = function () {
                         return id;
                     };
@@ -458,15 +435,12 @@ Erizo.Room = function (spec) {
 
     // Returns callback(id, error)
     that.startRecording = function (stream, callback) {
-        L.Logger.debug("Start Recording streamaa: " + stream.getID());
         sendMessageSocket('startRecorder', {to: stream.getID()}, function(id, error){
             if (id === null){
-                L.Logger.error('Error on start recording', error);
                 if (callback) callback(undefined, error);
                 return;
             }
 
-            L.Logger.info('Start recording', id);
             if (callback) callback(id);
         });
     }
@@ -475,11 +449,9 @@ Erizo.Room = function (spec) {
     that.stopRecording = function (recordingId, callback) {
         sendMessageSocket('stopRecorder', {id: recordingId}, function(result, error){
             if (result === null){
-                L.Logger.error('Error on stop recording', error);
                 if (callback) callback(undefined, error);
                 return;
             }
-            L.Logger.info('Stop recording');
             if (callback) callback(true);
         });
     }
@@ -492,12 +464,10 @@ Erizo.Room = function (spec) {
             // Media stream
             sendMessageSocket('unpublish', stream.getID(), function(result, error){
                 if (result === null){
-                    L.Logger.error('Error unpublishing stream', error);
                     if (callback) callback(undefined, error);
                     return;
                 }
 
-                L.Logger.info('Stream unpublished');
                 if (callback) callback(true);
 
 
@@ -534,22 +504,17 @@ Erizo.Room = function (spec) {
 
                     sendSDPSocket('subscribe', {streamId: stream.getID(), audio: options.audio, video: options.video, data: options.data, browser: Erizo.getBrowser()}, undefined, function (result, error) {
                         if (result === null) {
-                            L.Logger.error('Error subscribing to stream ', error);
                             if (callback)
                                 callback(undefined, error);
                             return;
                         }
 
-                        L.Logger.info('Subscriber added');
-                          
                         stream.pc = Erizo.Connection({callback: function (message) {
-                            L.Logger.info("Sending message", message);
                             sendSDPSocket('signaling_message', {streamId: stream.getID(), msg: message, browser: stream.pc.browser}, undefined, function () {});
                         }, nop2p: true, audio: stream.hasAudio(), video: stream.hasVideo(), stunServerUrl: that.stunServerUrl, turnServer: that.turnServer});
 
                         stream.pc.onaddstream = function (evt) {
                             // Draw on html
-                            L.Logger.info('Stream subscribed');
                             stream.stream = evt.stream;
                             var evt2 = Erizo.StreamEvent({type: 'stream-subscribed', stream: stream});
                             that.dispatchEvent(evt2);
@@ -562,23 +527,17 @@ Erizo.Room = function (spec) {
             } else if (stream.hasData() && options.data !== false) {
                 sendSDPSocket('subscribe', {streamId: stream.getID(), data: options.data}, undefined, function (result, error) {
                     if (result === null) {
-                        L.Logger.error('Error subscribing to stream ', error);
                         if (callback)
                             callback(undefined, error);
                         return;
                     }
-                    L.Logger.info('Stream subscribed');
                     var evt = Erizo.StreamEvent({type: 'stream-subscribed', stream: stream});
                     that.dispatchEvent(evt);
                     if(callback) callback(true);
                 });
             } else {
-                L.Logger.info("Subscribing to anything");
                 return;
             }
-
-            // Subscribe to stream stream
-            L.Logger.info("Subscribing to: " + stream.getID());
         }
     };
 
@@ -597,7 +556,7 @@ Erizo.Room = function (spec) {
                     removeStream(stream);
                     if (callback) callback(true);
                 }, function () {
-                    L.Logger.error("Error calling unsubscribe.");
+                    // Pass silently
                 });
             }
         }

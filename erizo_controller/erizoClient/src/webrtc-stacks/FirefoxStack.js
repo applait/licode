@@ -18,7 +18,7 @@ Erizo.FirefoxStack = function (spec) {
 
     if (spec.stunServerUrl !== undefined) {
         that.pc_config.iceServers.push({"url": spec.stunServerUrl});
-    } 
+    }
 
     if ((spec.turnServer || {}).url) {
         that.pc_config.iceServers.push({"username": spec.turnServer.username, "credential": spec.turnServer.password, "url": spec.turnServer.url});
@@ -55,11 +55,9 @@ Erizo.FirefoxStack = function (spec) {
                 spec.callback({type:'candidate', candidate: event.candidate});
             } else {
                 spec.localCandidates.push(event.candidate);
-                console.log("Local Candidates stored: ", spec.localCandidates.length, spec.localCandidates);
             }
 
         } else {
-            console.log("End of candidates.");
         }
     };
 
@@ -130,8 +128,7 @@ Erizo.FirefoxStack = function (spec) {
 
     that.createOffer = function () {
         that.peerConnection.createOffer(setLocalDesc, function(error){
-          L.Logger.error("Error", error);
-        
+
         }, that.mediaConstraints);
     };
 
@@ -150,18 +147,14 @@ Erizo.FirefoxStack = function (spec) {
     };
 
     that.processSignalingMessage = function (msg) {
-        
-        //console.log("Process Signaling Message", msg);
 
         if (msg.type === 'offer') {
             msg.sdp = setMaxBW(msg.sdp);
             that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg), function(){
                 that.peerConnection.createAnswer(setLocalDescp2p, function(error){
-                L.Logger.error("Error", error);
             }, that.mediaConstraints);
                 spec.remoteDescriptionSet = true;
             }, function(error){
-              L.Logger.error("Error setting Remote Description", error)
             });
         } else if (msg.type === 'answer') {
 
@@ -170,8 +163,6 @@ Erizo.FirefoxStack = function (spec) {
             //     answer = answer.replace(/a=sendrecv\\r\\na=mid:video/, 'a=recvonly\\r\\na=mid:video');
             //     answer = answer.split('a=ssrc:55543')[0] + '"}';
             // }
-
-            console.log("Set remote and local description", msg.sdp);
 
             msg.sdp = setMaxBW(msg.sdp);
 
@@ -183,19 +174,16 @@ Erizo.FirefoxStack = function (spec) {
                         that.peerConnection.addIceCandidate(spec.remoteCandidates.shift());
                     }
                     while(spec.localCandidates.length > 0) {
-                        L.Logger.info("Sending Candidate");
                         // IMPORTANT: preserve ordering of candidates
                         spec.callback({type:'candidate', candidate: spec.localCandidates.shift()});
                     }
                 }, function (error){
-                    L.Logger.error("Error Setting Remote Description", error);
                 });
             },function(error){
-               L.Logger.error("Failure setting Local Description", error);
             });
 
         } else if (msg.type === 'candidate') {
-          
+
             try {
                 var obj;
                 if (typeof(msg.candidate) === 'object') {
@@ -207,7 +195,6 @@ Erizo.FirefoxStack = function (spec) {
                 obj.candidate = obj.candidate.replace(/ udp /g, " UDP ");
                 obj.sdpMLineIndex = parseInt(obj.sdpMLineIndex);
                 var candidate = new RTCIceCandidate(obj);
-                //console.log("Remote Candidate",candidate);
 
                 if (spec.remoteDescriptionSet) {
                     that.peerConnection.addIceCandidate(candidate);
@@ -215,7 +202,6 @@ Erizo.FirefoxStack = function (spec) {
                     spec.remoteCandidates.push(candidate);
                 }
             } catch(e) {
-                L.Logger.error("Error parsing candidate", msg.candidate, e);
             }
         }
     }

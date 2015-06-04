@@ -16,7 +16,7 @@ Erizo.ChromeRoapStack = function (spec) {
 
     if (spec.stunServerUrl !== undefined) {
         that.pc_config.iceServers.push({"url": spec.stunServerUrl});
-    } 
+    }
 
     if ((spec.turnServer || {}).url) {
         that.pc_config.iceServers.push({"username": spec.turnServer.username, "credential": spec.turnServer.password, "url": spec.turnServer.url});
@@ -42,11 +42,9 @@ Erizo.ChromeRoapStack = function (spec) {
     that.peerConnection = new WebkitRTCPeerConnection(that.pc_config, that.con);
 
     that.peerConnection.onicecandidate = function (event) {
-        L.Logger.debug("PeerConnection: ", spec.session_id);
         if (!event.candidate) {
             // At the moment, we do not renegotiate when new candidates
             // show up after the more flag has been false once.
-            L.Logger.debug("State: " + that.peerConnection.iceGatheringState);
 
             if (that.ices === undefined) {
                 that.ices = 0;
@@ -60,8 +58,6 @@ Erizo.ChromeRoapStack = function (spec) {
             that.iceCandidateCount += 1;
         }
     };
-
-    //L.Logger.debug("Created webkitRTCPeerConnnection with config \"" + JSON.stringify(that.pc_config) + "\".");
 
     var setMaxBW = function (sdp) {
         if (spec.maxVideoBW) {
@@ -87,7 +83,6 @@ Erizo.ChromeRoapStack = function (spec) {
         // Offer: Check for glare and resolve.
         // Answer/OK: Remove retransmit for the msg this is an answer to.
         // Send back "OK" if this was an Answer.
-        L.Logger.debug('Activity on conn ' + that.sessionId);
         var msg = JSON.parse(msgstring), sd, regExp, exp;
         that.incomingMessage = msg;
 
@@ -113,7 +108,6 @@ Erizo.ChromeRoapStack = function (spec) {
                 //regExp = new RegExp(/m=video[\w\W]*\r\n/g);
 
                 //exp = msg.sdp.match(regExp);
-                //L.Logger.debug(exp);
 
                 //msg.sdp = msg.sdp.replace(regExp, exp + "b=AS:100\r\n");
 
@@ -121,7 +115,6 @@ Erizo.ChromeRoapStack = function (spec) {
                     sdp: msg.sdp,
                     type: 'answer'
                 };
-                L.Logger.debug("Received ANSWER: ", sd.sdp);
 
                 sd.sdp = setMaxBW(sd.sdp);
 
@@ -226,7 +219,7 @@ Erizo.ChromeRoapStack = function (spec) {
         if (that.actionNeeded) {
             if (that.state === 'new' || that.state === 'established') {
                 // See if the current offer is the same as what we already sent.
-                // If not, no change is needed.   
+                // If not, no change is needed.
 
                 that.peerConnection.createOffer(function (sessionDescription) {
 
@@ -235,7 +228,6 @@ Erizo.ChromeRoapStack = function (spec) {
                     //sessionDescription.sdp = newOffer.replace(/a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:.*\r\n/g, "a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:eUMxlV2Ib6U8qeZot/wEKHw9iMzfKUYpOPJrNnu3\r\n");
 
                     sessionDescription.sdp = setMaxBW(sessionDescription.sdp);
-                    L.Logger.debug("Changed", sessionDescription.sdp);
 
                     var newOffer = sessionDescription.sdp;
 
@@ -246,8 +238,6 @@ Erizo.ChromeRoapStack = function (spec) {
                         that.state = 'preparing-offer';
                         that.markActionNeeded();
                         return;
-                    } else {
-                        L.Logger.debug('Not sending a new offer');
                     }
 
                 }, null, that.mediaConstraints);
@@ -262,8 +252,6 @@ Erizo.ChromeRoapStack = function (spec) {
 
                 // Now able to send the offer we've already prepared.
                 that.prevOffer = that.peerConnection.localDescription.sdp;
-                L.Logger.debug("Sending OFFER: " + that.prevOffer);
-                //L.Logger.debug('Sent SDP is ' + that.prevOffer);
                 that.sendMessage('OFFER', that.prevOffer);
                 // Not done: Retransmission on non-response.
                 that.state = 'offer-sent';
@@ -276,7 +264,6 @@ Erizo.ChromeRoapStack = function (spec) {
 
                     if (!that.iceStarted) {
                         var now = new Date();
-                        L.Logger.debug(now.getTime() + ': Starting ICE in responder');
                         that.iceStarted = true;
                     } else {
                         that.markActionNeeded();
@@ -368,7 +355,7 @@ Erizo.ChromeRoapStack = function (spec) {
     that.peerConnection.oniceconnectionstatechange = function (e) {
         if (that.oniceconnectionstatechange) {
             that.oniceconnectionstatechange(e.currentTarget.iceConnectionState);
-        }   
+        }
     };
 
     // Variables that are part of the public interface of PeerConnection

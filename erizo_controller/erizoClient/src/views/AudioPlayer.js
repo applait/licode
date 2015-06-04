@@ -23,8 +23,6 @@ Erizo.AudioPlayer = function (spec) {
     // DOM element in which the AudioPlayer will be appended
     that.elementID = spec.elementID;
 
-
-    L.Logger.debug('Creating URL from stream ' + that.stream);
     var myURL = window.URL || webkitURL;
     that.stream_url = myURL.createObjectURL(that.stream);
 
@@ -34,10 +32,10 @@ Erizo.AudioPlayer = function (spec) {
     that.audio.setAttribute('style', 'width: 100%; height: 100%; position: absolute');
     that.audio.setAttribute('autoplay', 'autoplay');
 
-    if(spec.stream.local) 
+    if(spec.stream.local)
         that.audio.volume = 0;
 
-    if(spec.stream.local) 
+    if(spec.stream.local)
         that.audio.volume = 0;
 
 

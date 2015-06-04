@@ -17,7 +17,7 @@ Erizo.ChromeStableStack = function (spec) {
 
     if (spec.stunServerUrl !== undefined) {
         that.pc_config.iceServers.push({"url": spec.stunServerUrl});
-    } 
+    }
 
     if ((spec.turnServer || {}).url) {
         that.pc_config.iceServers.push({"username": spec.turnServer.username, "credential": spec.turnServer.password, "url": spec.turnServer.url});
@@ -37,13 +37,13 @@ Erizo.ChromeStableStack = function (spec) {
             'OfferToReceiveAudio': spec.audio
         }
     };
-    
+
     var errorCallback = function(message){
-      console.log("Error in Stack ", message);
+        // Pass silently
     }
 
     that.peerConnection = new WebkitRTCPeerConnection(that.pc_config, that.con);
-    
+
     var setMaxBW = function (sdp) {
         if (spec.video && spec.maxVideoBW) {
             var a = sdp.match(/m=video.*\r\n/);
@@ -93,11 +93,8 @@ Erizo.ChromeStableStack = function (spec) {
                 spec.callback({type:'candidate', candidate: candidateObject});
             } else {
                 spec.localCandidates.push(candidateObject);
-                console.log("Local Candidates stored: ", spec.localCandidates.length, spec.localCandidates);
             }
 
-        } else {
-            console.log("End of candidates.");
         }
     };
 
@@ -154,14 +151,13 @@ Erizo.ChromeStableStack = function (spec) {
     spec.remoteDescriptionSet = false;
 
     that.processSignalingMessage = function (msg) {
-        //console.log("Process Signaling Message", msg);
 
         if (msg.type === 'offer') {
             msg.sdp = setMaxBW(msg.sdp);
             that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg));
             that.peerConnection.createAnswer(setLocalDescp2p, null, that.mediaConstraints);
             spec.remoteDescriptionSet = true;
-        
+
         } else if (msg.type === 'answer') {
 
 
@@ -171,19 +167,15 @@ Erizo.ChromeStableStack = function (spec) {
             //     answer = answer.split('a=ssrc:55543')[0] + '"}';
             // }
 
-            console.log("Set remote and local description", msg.sdp);
-
             msg.sdp = setMaxBW(msg.sdp);
 
             that.peerConnection.setLocalDescription(localDesc, function(){
               that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg), function() {
                 spec.remoteDescriptionSet = true;
-                console.log("Candidates to be added: ", spec.remoteCandidates.length, spec.remoteCandidates);
                 while (spec.remoteCandidates.length > 0) {
                 // IMPORTANT: preserve ordering of candidates
                   that.peerConnection.addIceCandidate(spec.remoteCandidates.shift());
                 }
-                console.log("Local candidates to send:" , spec.localCandidates.length);
                 while(spec.localCandidates.length > 0) {
                 // IMPORTANT: preserve ordering of candidates
                   spec.callback({type:'candidate', candidate: spec.localCandidates.shift()});
@@ -207,10 +199,9 @@ Erizo.ChromeStableStack = function (spec) {
                     that.peerConnection.addIceCandidate(candidate);
                 } else {
                     spec.remoteCandidates.push(candidate);
-//                    console.log("Candidates stored: ", spec.remoteCandidates.length, spec.remoteCandidates);
                 }
             } catch(e) {
-                L.Logger.error("Error parsing candidate", msg.candidate);
+                // Pass silently
             }
         }
     }

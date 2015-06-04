@@ -30,11 +30,10 @@ Erizo.EventDispatcher = function (spec) {
         }
     };
 
-    // It dispatch a new event to the event listeners, based on the type 
+    // It dispatch a new event to the event listeners, based on the type
     // of event. All events are intended to be LicodeEvents.
     that.dispatchEvent = function (event) {
         var listener;
-        L.Logger.debug("Event: " + event.type);
         for (listener in spec.dispatcher.eventListeners[event.type]) {
             if (spec.dispatcher.eventListeners[event.type].hasOwnProperty(listener)) {
                 spec.dispatcher.eventListeners[event.type][listener](event);
@@ -50,7 +49,7 @@ Erizo.EventDispatcher = function (spec) {
 /*
  * Class LicodeEvent represents a generic Event in the library.
  * It handles the type of event, that is important when adding
- * event listeners to EventDispatchers and dispatching new events. 
+ * event listeners to EventDispatchers and dispatching new events.
  * A LicodeEvent can be initialized this way:
  * var event = LicodeEvent({type: "room-connected"});
  */

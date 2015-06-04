@@ -16,7 +16,7 @@ Erizo.BowserStack = function (spec) {
 
     if (spec.stunServerUrl !== undefined) {
         that.pc_config.iceServers.push({"url": spec.stunServerUrl});
-    } 
+    }
 
     if ((spec.turnServer || {}).url) {
         that.pc_config.iceServers.push({"username": spec.turnServer.username, "credential": spec.turnServer.password, "url": spec.turnServer.url});
@@ -36,9 +36,9 @@ Erizo.BowserStack = function (spec) {
     };
 
     that.peerConnection = new WebkitRTCPeerConnection(that.pc_config, that.con);
-    
+
     spec.remoteDescriptionSet = false;
-    
+
     var setMaxBW = function (sdp) {
         if (spec.maxVideoBW) {
             var a = sdp.match(/m=video.*\r\n/);
@@ -77,18 +77,16 @@ Erizo.BowserStack = function (spec) {
                 event.candidate.candidate ="a="+event.candidate.candidate;
             };
 
-            
+
             if (spec.remoteDescriptionSet) {
                 spec.callback({type:'candidate', candidate: event.candidate});
             } else {
                 spec.localCandidates.push(event.candidate);
-//                console.log("Local Candidates stored: ", spec.localCandidates.length, spec.localCandidates);
             }
 
         } else {
-            
+
           //  spec.callback(that.peerConnection.localDescription);
-            console.log("End of candidates." , that.peerConnection.localDescription);
         }
     };
 
@@ -103,9 +101,9 @@ Erizo.BowserStack = function (spec) {
             that.onremovestream(stream);
         }
     };
-    
+
     var errorCallback = function(message){
-      console.log("Error in Stack ", message);
+        // Pass silently
     }
 
     var localDesc;
@@ -113,10 +111,8 @@ Erizo.BowserStack = function (spec) {
     var setLocalDesc = function (sessionDescription) {
         sessionDescription.sdp = setMaxBW(sessionDescription.sdp);
 //        sessionDescription.sdp = sessionDescription.sdp.replace(/a=ice-options:google-ice\r\n/g, "");
-        console.log("Set local description", sessionDescription.sdp);
         localDesc = sessionDescription;
         that.peerConnection.setLocalDescription(localDesc, function(){
-          console.log("The final LocalDesc", that.peerConnection.localDescription);
           spec.callback(that.peerConnection.localDescription);
         }, errorCallback);
         //that.peerConnection.setLocalDescription(sessionDescription);
@@ -145,38 +141,32 @@ Erizo.BowserStack = function (spec) {
 
 
     that.processSignalingMessage = function (msg) {
-       console.log("Process Signaling Message", msg);
 
         if (msg.type === 'offer') {
             msg.sdp = setMaxBW(msg.sdp);
             that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg));
             that.peerConnection.createAnswer(setLocalDescp2p, null, that.mediaConstraints);
             spec.remoteDescriptionSet = true;
-        
-        } else if (msg.type === 'answer') {
 
-            console.log("Set remote description", msg.sdp);
+        } else if (msg.type === 'answer') {
 
             msg.sdp = setMaxBW(msg.sdp);
 
             that.peerConnection.setRemoteDescription(new RTCSessionDescription(msg), function() {
               spec.remoteDescriptionSet = true;
-              console.log("Candidates to be added: ", spec.remoteCandidates.length);
               while (spec.remoteCandidates.length > 0) {
-                console.log("Candidate :",spec.remoteCandidates[spec.remoteCandidates.length-1]);
                 that.peerConnection.addIceCandidate(spec.remoteCandidates.shift(), function(){}, errorCallback);
-               
+
               }
-//              console.log("Local candidates to send:" , spec.localCandidates.length);
               while(spec.localCandidates.length > 0) {
                 spec.callback({type:'candidate', candidate: spec.localCandidates.shift()});
               }
 
-            }, function(){console.log("Error Setting Remote Description");});
+            }, function(){ // Pass silently
+            });
 
         } else if (msg.type === 'candidate') {
-          console.log("Message with candidate");
-            try {              
+            try {
                 var obj;
                 if (typeof(msg.candidate) === 'object') {
                     obj = msg.candidate;
@@ -189,14 +179,13 @@ Erizo.BowserStack = function (spec) {
                 obj.sdpMLineIndex = parseInt(obj.sdpMLineIndex);
                 obj.sdpMLineIndex = obj.sdpMid=="audio"?0:1;
                 var candidate = new RTCIceCandidate(obj);
-                console.log("Remote Candidate",candidate);
                 if (spec.remoteDescriptionSet) {
                     that.peerConnection.addIceCandidate(candidate, function(){}, errorCallback);
                 } else {
                     spec.remoteCandidates.push(candidate);
                 }
             } catch(e) {
-                L.Logger.error("Error parsing candidate", msg.candidate);
+                // Pass silently
             }
         }
     }

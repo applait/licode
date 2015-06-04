@@ -40,7 +40,7 @@ Erizo.Stream = function (spec) {
 
     // Changes the attributes of this stream in the room.
     that.setAttributes = function(attrs) {
-        L.Logger.error("Failed to set attributes data. This Stream object has not been published.");
+        // Pass silently
     };
 
     that.updateLocalAttributes = function(attrs) {
@@ -69,7 +69,7 @@ Erizo.Stream = function (spec) {
 
     // Sends data through this stream.
     that.sendData = function (msg) {
-        L.Logger.error("Failed to send data. This Stream object has not that channel enabled.");
+        // Pass silently
     };
 
     // Initializes the stream and tries to retrieve a stream from local video and audio
@@ -77,24 +77,20 @@ Erizo.Stream = function (spec) {
     that.init = function () {
       try {
         if ((spec.audio || spec.video || spec.screen) && spec.url === undefined) {
-          L.Logger.debug("Requested access to local media");
           var videoOpt = spec.video;
           if (videoOpt == true && that.videoSize !== undefined) {
             videoOpt = {mandatory: {minWidth: that.videoSize[0], minHeight: that.videoSize[1], maxWidth: that.videoSize[2], maxHeight: that.videoSize[3]}};
           }
           var opt = {video: videoOpt, audio: spec.audio, fake: spec.fake, screen: spec.screen, extensionId:that.extensionId};
-          L.Logger.debug(opt);
           Erizo.GetUserMedia(opt, function (stream) {
             //navigator.webkitGetUserMedia("audio, video", function (stream) {
 
-            L.Logger.info("User has granted access to local media.");
             that.stream = stream;
 
             var streamEvent = Erizo.StreamEvent({type: "access-accepted"});
             that.dispatchEvent(streamEvent);
 
           }, function (error) {
-            L.Logger.error("Failed to get access to local media. Error code was " + error.code + ".");
             var streamEvent = Erizo.StreamEvent({type: "access-denied"});
             that.dispatchEvent(streamEvent);
           });
@@ -102,8 +98,8 @@ Erizo.Stream = function (spec) {
             var streamEvent = Erizo.StreamEvent({type: "access-accepted"});
             that.dispatchEvent(streamEvent);
           }
-          } catch (e) {
-            L.Logger.error("Error accessing to local media", e);
+      } catch (e) {
+          // Pass silently
           }
       };
 
